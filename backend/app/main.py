@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from . import models, schemas
 from .database import get_db
+from datetime import date
 
 app = FastAPI(title="Gestão de Oficina API")
 
@@ -177,23 +178,38 @@ def adicionar_servico_na_os(os_id: int, item: schemas.OSServicoAdd, db: Session 
     
     return {"status": "Serviço adicionado", "servico": servico.descricao}
 
-# --- Rota de Pagamento ---
+# Pagamento
 @app.post("/pagamentos/", response_model=schemas.PagamentoResponse)
 def registrar_pagamento(pagamento: schemas.PagamentoCreate, db: Session = Depends(get_db)):
-    # 1. Verifica se a OS existe
     os = db.query(models.OrdemServico).filter(models.OrdemServico.id == pagamento.ordem_servico_id).first()
     if not os:
         raise HTTPException(status_code=404, detail="Ordem de Serviço não encontrada")
     
-    # 2. Registra o Pagamento
     novo_pagamento = models.Pagamento(**pagamento.model_dump())
     db.add(novo_pagamento)
     db.commit()
-    db.refresh(novo_pagamento)
+    db.refresh(novo_pagamento) # importante para garantir que ele ja conste na lista de pagamentos da OS abaixo
     
+    # verifica quitacao
+    custo_pecas = sum(item.quantidade * float(item.valor_unitario) for item in os.itens_pecas)
+    custo_servicos = sum(item.quantidade * float(item.valor_unitario) for item in os.itens_servicos)
+    total_geral = custo_pecas + custo_servicos
+    db.refresh(os) 
+    total_pago = sum(float(p.valor) for p in os.pagamentos)
+
+    # (0.01) por causa de arredondamentos de float
+    if total_pago >= (total_geral - 0.01):
+        if os.status != "FINALIZADO":
+            os.status = "FINALIZADO"
+            os.data_fechamento = date.today()
+            db.add(os)
+            db.commit()
+            db.refresh(os)
+            print(f"AUTOMACAO: OS {os.id} quitada e finalizada automaticamente.")
+
     return novo_pagamento
 
-# --- Rota para Mudar Status (Aprovar/Finalizar) ---
+# Mudar Status
 @app.patch("/os/{os_id}/status", response_model=schemas.OSResponse)
 def atualizar_status_os(os_id: int, status_data: schemas.OSStatusUpdate, db: Session = Depends(get_db)):
     os = db.query(models.OrdemServico).filter(models.OrdemServico.id == os_id).first()
@@ -201,26 +217,22 @@ def atualizar_status_os(os_id: int, status_data: schemas.OSStatusUpdate, db: Ses
         raise HTTPException(status_code=404, detail="OS não encontrada")
     
     os.status = status_data.status
-    
-    # Se finalizar, poderiamos preencher a data de fechamento automaticamente
+
     if status_data.status == "FINALIZADO":
-        os.data_fechamento = func.now()
+        os.data_fechamento = date.today()
         
     db.commit()
     db.refresh(os)
     
-    # Hack do numero_os novamente
     os.numero_os = os.id
     return os
 
-# --- ATUALIZAÇÃO DA ROTA DE DETALHES (Substitua a anterior) ---
 @app.get("/os/{os_id}/detalhes", response_model=schemas.OSDetalhada)
 def ver_detalhes_os(os_id: int, db: Session = Depends(get_db)):
     os = db.query(models.OrdemServico).filter(models.OrdemServico.id == os_id).first()
     if not os:
         raise HTTPException(status_code=404, detail="OS não encontrada")
     
-    # 1. Cálculos de Peças e Serviços (Igual antes)
     lista_pecas = []
     total_pecas = 0.0
     for item in os.itens_pecas:
@@ -247,7 +259,6 @@ def ver_detalhes_os(os_id: int, db: Session = Depends(get_db)):
             "subtotal": subtotal
         })
 
-    # 2. NOVO: Cálculo dos Pagamentos
     total_pago = 0.0
     lista_pagamentos = []
     for pag in os.pagamentos:
@@ -257,7 +268,6 @@ def ver_detalhes_os(os_id: int, db: Session = Depends(get_db)):
     total_geral = total_pecas + total_servicos
     saldo_devedor = total_geral - total_pago
 
-    # 3. Resposta
     return {
         "id": os.id,
         "km_atual": os.km_atual,
