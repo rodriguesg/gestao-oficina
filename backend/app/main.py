@@ -15,7 +15,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"], # Permite GET, POST, PUT, DELETE...
     allow_headers=["*"],
@@ -148,27 +148,62 @@ def criar_servico(servico: schemas.ServicoCreate, db: Session = Depends(get_db))
 
 # Adicionar Itens na OS
 
-@app.post("/os/{os_id}/adicionar-peca/")
-def adicionar_peca_na_os(os_id: int, item: schemas.OSPecaAdd, db: Session = Depends(get_db)):
+@app.post("/os/{os_id}/adicionar-peca")
+def adicionar_peca_os(
+    os_id: int, 
+    payload: schemas.OSPecaAdd, # Usando o schema novo
+    db: Session = Depends(get_db)
+):
+    # Verifica se a OS existe
     os = db.query(models.OrdemServico).filter(models.OrdemServico.id == os_id).first()
     if not os:
         raise HTTPException(status_code=404, detail="OS não encontrada")
-    
-    peca = db.query(models.Peca).filter(models.Peca.id == item.peca_id).first()
-    if not peca:
-        raise HTTPException(status_code=404, detail="Peça não encontrada")
-    
-    novo_item_os = models.OSPeca(
-        ordem_servico_id=os_id,
-        peca_id=item.peca_id,
-        quantidade=item.quantidade,
-        valor_unitario=peca.valor_venda  # <--- O Segredo do ERP está aqui
+
+    # Prepara o objeto para salvar
+    novo_item = models.OSPeca(
+        os_id=os_id,
+        quantidade=payload.quantidade
     )
+
+    # LÓGICA HÍBRIDA (ESTOQUE vs AVULSO)
+    if payload.peca_id:
+        # --- MODO 1: VEIO DO ESTOQUE ---
+        peca_estoque = db.query(models.Peca).filter(models.Peca.id == payload.peca_id).first()
+        if not peca_estoque:
+            raise HTTPException(status_code=404, detail="Peça não encontrada no estoque")
+        
+        novo_item.peca_id = peca_estoque.id
+        novo_item.nome_peca = peca_estoque.nome
+        novo_item.valor_unitario = peca_estoque.valor_venda
     
-    db.add(novo_item_os)
+    else:
+        # --- MODO 2: ITEM AVULSO ---
+        if not payload.nome_peca or not payload.valor_unitario:
+            raise HTTPException(status_code=400, detail="Para item avulso, informe nome e valor.")
+        
+        novo_item.peca_id = None # Importante: Coluna do banco deve aceitar NULL
+        novo_item.nome_peca = payload.nome_peca
+        novo_item.valor_unitario = payload.valor_unitario
+
+    # Calcula subtotal
+    novo_item.subtotal = novo_item.quantidade * novo_item.valor_unitario
+
+    db.add(novo_item)
     db.commit()
     
-    return {"status": "Peça adicionada", "item": item.model_dump(), "valor_congelado": peca.valor_venda}
+    return {"message": "Item adicionado com sucesso"}
+
+# Adicione isso no main.py para limpar a sujeira
+@app.delete("/debug/resetar-itens-os")
+def resetar_itens(db: Session = Depends(get_db)):
+    try:
+        # Apaga todas as conexões de peças com OS
+        num_rows = db.query(models.OSPeca).delete()
+        db.commit()
+        return {"status": "sucesso", "itens_removidos": num_rows}
+    except Exception as e:
+        db.rollback()
+        return {"erro": str(e)}
 
 @app.post("/os/{os_id}/adicionar-servico/")
 def adicionar_servico_na_os(os_id: int, item: schemas.OSServicoAdd, db: Session = Depends(get_db)):

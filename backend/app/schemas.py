@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import date
+from typing import Optional
 
 #Cliente
 class ClienteBase(BaseModel):
@@ -103,24 +104,24 @@ class ServicoResponse(ServicoBase):
     class Config:
         from_attributes = True
 
-# ADICIONAR itens na OS
 class OSPecaAdd(BaseModel):
-    peca_id: int
     quantidade: int = 1
+    peca_id: Optional[int] = None 
+    
+    nome_peca: Optional[str] = None
+    valor_unitario: Optional[float] = None
 
 class OSServicoAdd(BaseModel):
     servico_id: int
     quantidade: int = 1
 
-# OS Detalhada
-
-# Item de Peça(os)
 class OSPecaDetail(BaseModel):
-    peca_id: int
+    # O ID pode vir nulo na resposta se foi cadastrado manualmente
+    peca_id: Optional[int] = None 
     quantidade: int
     valor_unitario: float
-    nome_peca: str  # Vamos preencher isso manualmente na rota
-    subtotal: float # Vamos calcular isso na rota
+    nome_peca: str
+    subtotal: float
 
 # Item de Serviço(os)
 class OSServicoDetail(BaseModel):
