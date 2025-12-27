@@ -9,7 +9,6 @@ import { AddIcon } from '@chakra-ui/icons'
 import { FaCarSide } from 'react-icons/fa' 
 import axios from 'axios'
 
-// ... (Interfaces mantidas) ...
 interface Veiculo { id: number; marca: string; modelo: string; placa: string; ano: number; cliente_id: number; }
 interface Cliente { id: number; nome: string; }
 
@@ -22,13 +21,11 @@ export default function Veiculos() {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const toast = useToast()
 
-  // --- CORES DINÂMICAS ---
   const cardBg = useColorModeValue('white', 'gray.800')
   const textColor = useColorModeValue('gray.700', 'white')
   const tableHeaderBg = useColorModeValue('gray.50', 'gray.700')
   const borderColor = useColorModeValue('gray.100', 'gray.700')
 
-  // ... (Fetch e Salvar mantidos iguais) ...
   const fetchData = async () => {
     try {
         const [resVeiculos, resClientes] = await Promise.all([
@@ -41,7 +38,6 @@ export default function Veiculos() {
   useEffect(() => { fetchData() }, [])
 
   const handleSalvar = async () => {
-    // ... lógica de salvar igual ao anterior ...
     try {
         await axios.post('http://127.0.0.1:8000/veiculos/', { marca, modelo, placa, ano: parseInt(ano), cliente_id: parseInt(clienteId) })
         toast({ title: 'Veículo cadastrado!', status: 'success' })
@@ -94,7 +90,6 @@ export default function Veiculos() {
         </Table>
       </Box>
 
-      {/* MODAL */}
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
         <ModalOverlay backdropFilter='blur(2px)' />
         <ModalContent bg={cardBg}>

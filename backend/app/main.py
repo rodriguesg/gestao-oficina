@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
 from . import models, schemas
@@ -6,6 +7,19 @@ from .database import get_db
 from datetime import date
 
 app = FastAPI(title="Gestão de Oficina API")
+
+origins = [
+    "http://localhost:5173", # Porta padrão do Vite (React)
+    "http://localhost:3000", # Porta alternativa comum
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"], # Permite GET, POST, PUT, DELETE...
+    allow_headers=["*"],
+)
 
 #Clientes
 @app.post("/clientes/", response_model=schemas.ClienteResponse)

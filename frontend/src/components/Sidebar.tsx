@@ -4,7 +4,7 @@ import {
   Switch, HStack, useColorMode, Avatar, VStack
 } from '@chakra-ui/react'
 import { Link, useLocation } from 'react-router-dom'
-import { FaChartLine, FaUser, FaCar, FaTools, FaMoneyBillWave, FaSignOutAlt, FaMoon, FaSun } from 'react-icons/fa'
+import { FaChartLine, FaUser, FaCar, FaTools, FaMoneyBillWave, FaSignOutAlt, FaMoon, FaSun, FaBoxes } from 'react-icons/fa'
 
 // --- Componente do Item de Menu ---
 interface NavItemProps {
@@ -91,6 +91,7 @@ export default function Sidebar({ children }: SidebarProps) {
             <NavItem icon={FaCar} to="/veiculos">Veículos</NavItem>
             <NavItem icon={FaTools} to="/os">Ordens de Serviço</NavItem>
             <NavItem icon={FaMoneyBillWave} to="/financeiro">Financeiro</NavItem>
+            <NavItem icon={FaBoxes} to="/estoque">Estoque</NavItem>
           </VStack>
         </Box>
 

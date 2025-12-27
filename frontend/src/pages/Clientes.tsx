@@ -17,7 +17,6 @@ interface Cliente {
 
 export default function Clientes() {
   const [clientes, setClientes] = useState<Cliente[]>([])
-  // ... (estados do form mantidos iguais) ...
   const [novoNome, setNovoNome] = useState('')
   const [novoTelefone, setNovoTelefone] = useState('')
   const [novoCpf, setNovoCpf] = useState('')
@@ -25,7 +24,7 @@ export default function Clientes() {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const toast = useToast()
 
-  // --- CORES DINÂMICAS DO TEMA ---
+
   const cardBg = useColorModeValue('white', 'gray.800')
   const textColor = useColorModeValue('gray.700', 'white')
   const tableHeaderBg = useColorModeValue('gray.50', 'gray.700')
@@ -40,7 +39,6 @@ export default function Clientes() {
   useEffect(() => { fetchClientes() }, [])
 
   const handleSalvar = async () => {
-     // ... (Lógica de salvar idêntica à anterior) ...
      try {
       await axios.post('http://127.0.0.1:8000/clientes/', {
         nome: novoNome,
@@ -58,7 +56,7 @@ export default function Clientes() {
 
   return (
     <Box>
-        {/* Header da Página */}
+
         <Flex 
             mb={8} 
             bg={cardBg} 
@@ -76,7 +74,6 @@ export default function Clientes() {
           </Button>
         </Flex>
 
-        {/* Tabela */}
         <Box 
             bg={cardBg} 
             borderRadius="xl" 
@@ -114,14 +111,12 @@ export default function Clientes() {
           </Table>
         </Box>
 
-      {/* Modal - Também precisa de cores no background! */}
       <Modal isOpen={isOpen} onClose={onClose} isCentered size="xl">
         <ModalOverlay backdropFilter='blur(2px)' />
         <ModalContent borderRadius="xl" bg={cardBg}>
           <ModalHeader color={textColor}>Novo Cliente</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
-            {/* O Input já pega o estilo do theme.ts automaticamente */}
             <Flex gap={4}>
               <FormControl isRequired>
                 <FormLabel>Nome</FormLabel>
