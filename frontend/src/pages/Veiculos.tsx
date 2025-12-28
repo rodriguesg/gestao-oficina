@@ -7,10 +7,8 @@ import {
 } from '@chakra-ui/react'
 import { AddIcon } from '@chakra-ui/icons'
 import { FaCarSide } from 'react-icons/fa' 
-import axios from 'axios'
-
-interface Veiculo { id: number; marca: string; modelo: string; placa: string; ano: number; cliente_id: number; }
-interface Cliente { id: number; nome: string; }
+import api from '../services/api'
+import type { Veiculo, Cliente } from '../types'
 
 export default function Veiculos() {
   const [veiculos, setVeiculos] = useState<Veiculo[]>([])
@@ -29,8 +27,8 @@ export default function Veiculos() {
   const fetchData = async () => {
     try {
         const [resVeiculos, resClientes] = await Promise.all([
-          axios.get('http://127.0.0.1:8000/veiculos/'),
-          axios.get('http://127.0.0.1:8000/clientes/')
+          api.get<Veiculo[]>('/veiculos/'),
+          api.get<Cliente[]>('/clientes/')
         ])
         setVeiculos(resVeiculos.data); setClientes(resClientes.data)
     } catch(e) { console.error(e) }
@@ -39,7 +37,7 @@ export default function Veiculos() {
 
   const handleSalvar = async () => {
     try {
-        await axios.post('http://127.0.0.1:8000/veiculos/', { marca, modelo, placa, ano: parseInt(ano), cliente_id: parseInt(clienteId) })
+        await api.post('/veiculos/', { marca, modelo, placa, ano: parseInt(ano), cliente_id: parseInt(clienteId) })
         toast({ title: 'Veículo cadastrado!', status: 'success' })
         setMarca(''); setModelo(''); setPlaca(''); setAno(''); setClienteId(''); onClose(); fetchData()
     } catch(e) { toast({ title: 'Erro', status: 'error' }) }
@@ -49,31 +47,20 @@ export default function Veiculos() {
 
   return (
     <Box>
-      <Flex 
-        mb={8} bg={cardBg} p={4} borderRadius="xl" shadow="sm" align="center" 
-        border="1px solid" borderColor={borderColor}
-      >
+      <Flex mb={8} bg={cardBg} p={4} borderRadius="xl" shadow="sm" align="center" border="1px solid" borderColor={borderColor}>
         <HStack>
-            <Box p={2} bg="brand.500" borderRadius="lg" color="white">
-                <FaCarSide size={20} />
-            </Box>
+            <Box p={2} bg="brand.500" borderRadius="lg" color="white"><FaCarSide size={20} /></Box>
             <Heading size="md" color={textColor}>Frota de Veículos</Heading>
         </HStack>
         <Spacer />
-        <Button leftIcon={<AddIcon />} colorScheme="brand" size="sm" onClick={onOpen}>
-          Novo Veículo
-        </Button>
+        <Button leftIcon={<AddIcon />} colorScheme="brand" size="sm" onClick={onOpen}>Novo Veículo</Button>
       </Flex>
 
       <Box bg={cardBg} borderRadius="xl" shadow="sm" overflow="hidden" border="1px solid" borderColor={borderColor}>
         <Table variant="simple">
           <Thead bg={tableHeaderBg}>
             <Tr>
-              <Th color={textColor}>Veículo</Th>
-              <Th color={textColor}>Placa</Th>
-              <Th color={textColor}>Proprietário</Th>
-              <Th isNumeric color={textColor}>Ano</Th>
-              <Th isNumeric color={textColor}>Ações</Th>
+              <Th color={textColor}>Veículo</Th><Th color={textColor}>Placa</Th><Th color={textColor}>Proprietário</Th><Th isNumeric color={textColor}>Ano</Th><Th isNumeric color={textColor}>Ações</Th>
             </Tr>
           </Thead>
           <Tbody>
@@ -89,7 +76,7 @@ export default function Veiculos() {
           </Tbody>
         </Table>
       </Box>
-
+      {/* ... (O Modal permanece basicamente igual, só certifique-se de que os estados batem) ... */}
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
         <ModalOverlay backdropFilter='blur(2px)' />
         <ModalContent bg={cardBg}>

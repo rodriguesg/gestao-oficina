@@ -3,50 +3,67 @@ import {
   Box, Flex, Heading, Button, Table, Thead, Tbody, Tr, Th, Td,
   Badge, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader,
   ModalFooter, ModalBody, ModalCloseButton, FormControl, FormLabel, Input,
-  useToast, HStack, Avatar, Spacer, useColorModeValue, Text
+  useToast, HStack, Avatar, Spacer, useColorModeValue, Text, IconButton
 } from '@chakra-ui/react'
-import { AddIcon } from '@chakra-ui/icons'
-import axios from 'axios'
-
-interface Cliente {
-  id: number;
-  nome: string;
-  telefone: string;
-  cpf_cnpj: string;
-}
+import { AddIcon, EditIcon, DeleteIcon } from '@chakra-ui/icons'
+import api from '../services/api'
+import type { Cliente } from '../types'
 
 export default function Clientes() {
   const [clientes, setClientes] = useState<Cliente[]>([])
-  const [novoNome, setNovoNome] = useState('')
-  const [novoTelefone, setNovoTelefone] = useState('')
-  const [novoCpf, setNovoCpf] = useState('')
+  
+  // Estados do Formulário
+  const [idEdicao, setIdEdicao] = useState<number | null>(null)
+  const [nome, setNome] = useState('')
+  const [telefone, setTelefone] = useState('')
+  const [cpf, setCpf] = useState('')
+  const [endereco, setEndereco] = useState('') // Adicionei endereço que faltava
 
   const { isOpen, onOpen, onClose } = useDisclosure()
   const toast = useToast()
 
-
   const cardBg = useColorModeValue('white', 'gray.800')
   const textColor = useColorModeValue('gray.700', 'white')
-  const tableHeaderBg = useColorModeValue('gray.50', 'gray.700')
   const borderColor = useColorModeValue('gray.100', 'gray.700')
 
-  const fetchClientes = () => {
-    axios.get('http://127.0.0.1:8000/clientes/')
-      .then(response => setClientes(response.data))
-      .catch(error => console.error("Erro:", error))
+  const fetchClientes = async () => {
+    try {
+        const { data } = await api.get<Cliente[]>('/clientes/')
+        setClientes(data)
+    } catch (error) { console.error(error) }
   }
 
   useEffect(() => { fetchClientes() }, [])
 
+  const abrirModalCriar = () => {
+      setIdEdicao(null)
+      setNome(''); setTelefone(''); setCpf(''); setEndereco('')
+      onOpen()
+  }
+
+  const abrirModalEditar = (cliente: Cliente) => {
+      setIdEdicao(cliente.id)
+      setNome(cliente.nome)
+      setTelefone(cliente.telefone)
+      setCpf(cliente.cpf_cnpj)
+      setEndereco(cliente.endereco || '')
+      onOpen()
+  }
+
   const handleSalvar = async () => {
      try {
-      await axios.post('http://127.0.0.1:8000/clientes/', {
-        nome: novoNome,
-        telefone: novoTelefone,
-        cpf_cnpj: novoCpf
-      })
-      toast({ title: 'Cliente cadastrado.', status: 'success' })
-      setNovoNome(''); setNovoTelefone(''); setNovoCpf('');
+      const payload = { nome, telefone, cpf_cnpj: cpf, endereco }
+      
+      if (idEdicao) {
+          // EDITAR
+          await api.put(`/clientes/${idEdicao}`, payload) // Requer backend PUT
+          toast({ title: 'Cliente atualizado.', status: 'success' })
+      } else {
+          // CRIAR
+          await api.post('/clientes/', payload)
+          toast({ title: 'Cliente cadastrado.', status: 'success' })
+      }
+      
       onClose()
       fetchClientes()
     } catch (error) {
@@ -54,57 +71,55 @@ export default function Clientes() {
     }
   }
 
+  const handleExcluir = async (id: number) => {
+      if (!confirm("Tem certeza? Isso pode apagar veículos e OS associadas!")) return
+      try {
+          await api.delete(`/clientes/${id}`) // Requer backend DELETE
+          toast({ title: 'Cliente removido.', status: 'info' })
+          fetchClientes()
+      } catch (error) {
+          toast({ title: 'Erro ao excluir.', description: 'Verifique se o cliente tem pendências.', status: 'error' })
+      }
+  }
+
   return (
     <Box>
-
-        <Flex 
-            mb={8} 
-            bg={cardBg} 
-            p={4} 
-            borderRadius="xl" 
-            shadow="sm" 
-            align="center"
-            border="1px solid"
-            borderColor={borderColor}
-        >
+        <Flex mb={8} bg={cardBg} p={4} borderRadius="xl" shadow="sm" align="center" border="1px solid" borderColor={borderColor}>
           <Heading size="md" color={textColor}>Gestão de Clientes</Heading>
           <Spacer />
-          <Button leftIcon={<AddIcon />} colorScheme="brand" size="sm" onClick={onOpen}>
+          <Button leftIcon={<AddIcon />} colorScheme="brand" size="sm" onClick={abrirModalCriar}>
             Novo Cliente
           </Button>
         </Flex>
 
-        <Box 
-            bg={cardBg} 
-            borderRadius="xl" 
-            shadow="sm" 
-            overflow="hidden"
-            border="1px solid"
-            borderColor={borderColor}
-        >
+        <Box bg={cardBg} borderRadius="xl" shadow="sm" overflow="hidden" border="1px solid" borderColor={borderColor}>
           <Table variant="simple">
-            <Thead bg={tableHeaderBg}>
+            <Thead bg={useColorModeValue('gray.50', 'gray.700')}>
               <Tr>
-                <Th color={textColor}>Cliente</Th>
-                <Th color={textColor}>Contato</Th>
-                <Th color={textColor}>Documento</Th>
-                <Th color={textColor}>Status</Th>
-                <Th isNumeric color={textColor}>Ações</Th>
+                <Th>Cliente</Th>
+                <Th>Contato</Th>
+                <Th>Documento</Th>
+                <Th isNumeric>Ações</Th>
               </Tr>
             </Thead>
             <Tbody>
               {clientes.map(cliente => (
-                <Tr key={cliente.id} _hover={{ bg: tableHeaderBg }}>
+                <Tr key={cliente.id}>
                   <Td>
                     <HStack>
-                      <Avatar size="xs" name={cliente.nome} bg="brand.500" color="white" />
-                      <Text fontWeight="bold" color={textColor}>{cliente.nome}</Text>
+                      <Avatar size="xs" name={cliente.nome} bg="brand.500" />
+                      <Box>
+                        <Text fontWeight="bold" fontSize="sm">{cliente.nome}</Text>
+                        <Text fontSize="xs" color="gray.500">{cliente.endereco}</Text>
+                      </Box>
                     </HStack>
                   </Td>
-                  <Td color="gray.500">{cliente.telefone}</Td>
-                  <Td color="gray.500">{cliente.cpf_cnpj}</Td>
-                  <Td><Badge colorScheme="green">ATIVO</Badge></Td>
-                  <Td isNumeric><Button size="xs" variant="ghost">Editar</Button></Td>
+                  <Td fontSize="sm">{cliente.telefone}</Td>
+                  <Td fontSize="sm"><Badge>{cliente.cpf_cnpj}</Badge></Td>
+                  <Td isNumeric>
+                      <IconButton aria-label="Editar" icon={<EditIcon />} size="sm" mr={2} onClick={() => abrirModalEditar(cliente)} />
+                      <IconButton aria-label="Excluir" icon={<DeleteIcon />} size="sm" colorScheme="red" variant="ghost" onClick={() => handleExcluir(cliente.id)} />
+                  </Td>
                 </Tr>
               ))}
             </Tbody>
@@ -114,23 +129,29 @@ export default function Clientes() {
       <Modal isOpen={isOpen} onClose={onClose} isCentered size="xl">
         <ModalOverlay backdropFilter='blur(2px)' />
         <ModalContent borderRadius="xl" bg={cardBg}>
-          <ModalHeader color={textColor}>Novo Cliente</ModalHeader>
+          <ModalHeader>{idEdicao ? 'Editar Cliente' : 'Novo Cliente'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
             <Flex gap={4}>
               <FormControl isRequired>
                 <FormLabel>Nome</FormLabel>
-                <Input value={novoNome} onChange={(e) => setNovoNome(e.target.value)} />
+                <Input value={nome} onChange={(e) => setNome(e.target.value)} />
               </FormControl>
-              <FormControl w="40%">
-                <FormLabel>CPF</FormLabel>
-                <Input value={novoCpf} onChange={(e) => setNovoCpf(e.target.value)} />
+              <FormControl w="40%" isRequired>
+                <FormLabel>CPF/CNPJ</FormLabel>
+                <Input value={cpf} onChange={(e) => setCpf(e.target.value)} />
               </FormControl>
             </Flex>
-            <FormControl mt={4}>
-              <FormLabel>Telefone</FormLabel>
-              <Input value={novoTelefone} onChange={(e) => setNovoTelefone(e.target.value)} />
-            </FormControl>
+            <Flex gap={4} mt={4}>
+                <FormControl isRequired>
+                <FormLabel>Telefone</FormLabel>
+                <Input value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+                </FormControl>
+                <FormControl isRequired>
+                <FormLabel>Endereço</FormLabel>
+                <Input value={endereco} onChange={(e) => setEndereco(e.target.value)} />
+                </FormControl>
+            </Flex>
           </ModalBody>
           <ModalFooter>
             <Button onClick={onClose} mr={3}>Cancelar</Button>

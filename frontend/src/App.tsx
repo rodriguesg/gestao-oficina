@@ -4,11 +4,8 @@ import Clientes from './pages/Clientes'
 import Veiculos from './pages/Veiculos'
 import OrdensServico from './pages/OrdensServico'
 import Estoque from './pages/Estoque'
-import { Box, Heading, Text } from '@chakra-ui/react'
-
-// Páginas "Placeholder" (Só para não dar erro 404 enquanto não criamos)
-const Dashboard = () => <Box><Heading>Bem-vindo à Oficina</Heading><Text>Resumo do dia aqui...</Text></Box>
-const Financeiro = () => <Box><Heading>Financeiro</Heading><Text>Em construção...</Text></Box>
+import Dashboard from './pages/Dashboard'
+import Financeiro from './pages/Financeiro'
 
 function App() {
   return (
