@@ -2,10 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import date
-from .. import models, schemas
+from .. import models, schemas, security
 from ..database import get_db
 
-router = APIRouter(prefix="/os", tags=["Ordens de Serviço"])
+router = APIRouter(
+    prefix="/os", 
+    tags=["Ordens de Serviço"],
+    dependencies=[Depends(security.get_current_user)]
+)
 
 @router.post("/", response_model=schemas.OSResponse)
 def abrir_os(os_data: schemas.OSCreate, db: Session = Depends(get_db)):

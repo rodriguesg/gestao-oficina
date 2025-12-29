@@ -142,3 +142,12 @@ class Despesa(Base):
     data_pagamento: Mapped[Optional[date]] = mapped_column(Date) 
     categoria: Mapped[str] = mapped_column(String(50)) 
     status: Mapped[str] = mapped_column(String(20), default="PAGO") 
+
+class Usuario(Base):
+    __tablename__ = 'usuario'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    role: Mapped[str] = mapped_column(String(20), default="ATENDENTE") # ADMIN, MECANICO, ATENDENTE
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)

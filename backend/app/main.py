@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import clientes, veiculos, mecanicos, os, estoque, financeiro
+from .routers import clientes, veiculos, mecanicos, os, estoque, financeiro, auth
 
 app = FastAPI(title="Gestão de Oficina API")
 
@@ -21,6 +21,7 @@ app.include_router(mecanicos.router)
 app.include_router(os.router)
 app.include_router(estoque.router)
 app.include_router(financeiro.router)
+app.include_router(auth.router)
 
 @app.get("/")
 def root():

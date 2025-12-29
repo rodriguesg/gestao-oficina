@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from .. import models, schemas
+from .. import models, schemas, security
 from ..database import get_db
 
-router = APIRouter(tags=["Catálogo (Estoque & Serviços)"])
+router = APIRouter(
+    tags=["Catálogo (Estoque & Serviços)"],
+    dependencies=[Depends(security.get_current_user)]
+)
 
 # =======================
 # --- PEÇAS ---

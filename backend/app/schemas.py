@@ -196,3 +196,25 @@ class ResumoFinanceiro(BaseModel):
     total_receitas: float
     total_despesas: float
     saldo: float
+
+# --- SEGURANÇA (USUÁRIOS & TOKEN) ---
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+    role: Optional[str] = None
+
+class UsuarioBase(BaseModel):
+    username: str
+    role: str = "ATENDENTE"
+    is_active: bool = True
+
+class UsuarioCreate(UsuarioBase):
+    password: str
+
+class UsuarioResponse(UsuarioBase):
+    id: int
+    class Config:
+        from_attributes = True

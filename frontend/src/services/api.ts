@@ -4,11 +4,22 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
 
-// Interceptor para logs ou tratamento de erro global
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('@OficinaPro:token');
+  
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  
+  return config;
+});
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error(`Erro na requisição ${error.config?.url}:`, error);
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('@OficinaPro:token');
+    }
     return Promise.reject(error);
   }
 );

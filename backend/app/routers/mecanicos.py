@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from .. import models, schemas
+from .. import models, schemas, security
 from ..database import get_db
 
-router = APIRouter(prefix="/mecanicos", tags=["Mecânicos"])
+router = APIRouter(
+    prefix="/mecanicos", 
+    tags=["Mecânicos"],
+    dependencies=[Depends(security.get_current_user)])
 
 @router.post("/", response_model=schemas.MecanicoResponse)
 def criar_mecanico(mecanico: schemas.MecanicoCreate, db: Session = Depends(get_db)):

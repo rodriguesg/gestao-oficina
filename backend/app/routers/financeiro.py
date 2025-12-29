@@ -3,10 +3,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from datetime import date
-from .. import models, schemas
+from .. import models, schemas, security
 from ..database import get_db
 
-router = APIRouter(prefix="/pagamentos", tags=["Financeiro"])
+router = APIRouter(
+    prefix="/pagamentos", 
+    tags=["Financeiro"],
+    dependencies=[Depends(security.get_current_user)]
+)
 
 @router.post("/", response_model=schemas.PagamentoResponse)
 def registrar_pagamento(pagamento: schemas.PagamentoCreate, db: Session = Depends(get_db)):
@@ -74,9 +78,12 @@ def listar_despesas(db: Session = Depends(get_db)):
     return db.query(models.Despesa).order_by(models.Despesa.data_vencimento.desc()).all()
 
 @router.delete("/despesas/{id}")
-def remover_despesa(id: int, db: Session = Depends(get_db)):
+def remover_despesa(id: int, db: Session = Depends(get_db), current_user: models.Usuario = Depends(security.require_role(["ADMIN"]))):
     despesa = db.query(models.Despesa).filter(models.Despesa.id == id).first()
     if not despesa: raise HTTPException(404, "Despesa não encontrada")
+
+    print(f"Auditoria: Usuário {current_user.username} (ID: {current_user.id}) está removendo a despesa {id}")
+
     db.delete(despesa)
     db.commit()
     return {"message": "Removido"}
