@@ -97,7 +97,7 @@ def resetar_itens(db: Session = Depends(get_db)):
         db.rollback()
         return {"erro": str(e)}
 
-@router.post("/os/{os_id}/adicionar-servico/")
+@router.post("/{os_id}/adicionar-servico/")
 def adicionar_servico_na_os(os_id: int, item: schemas.OSServicoAdd, db: Session = Depends(get_db)):
     os = db.query(models.OrdemServico).filter(models.OrdemServico.id == os_id).first()
     if not os:
@@ -107,11 +107,13 @@ def adicionar_servico_na_os(os_id: int, item: schemas.OSServicoAdd, db: Session 
     if not servico:
         raise HTTPException(status_code=404, detail="Serviço não encontrado")
         
+    valor_final = item.valor if item.valor is not None else servico.valor_mao_obra
+
     novo_item_servico = models.OSServico(
         ordem_servico_id=os_id,
         servico_id=item.servico_id,
         quantidade=item.quantidade,
-        valor_unitario=servico.valor_mao_obra
+        valor_unitario=valor_final # <--- USA O VALOR FINAL
     )
     
     db.add(novo_item_servico)
@@ -197,3 +199,37 @@ def ver_detalhes_os(os_id: int, db: Session = Depends(get_db)):
         "total_pago": total_pago,       # Campo calculado
         "saldo_devedor": saldo_devedor  # Campo calculado
     }
+
+@router.delete("/{os_id}/pecas/{peca_id}")
+def remover_peca_os(os_id: int, peca_id: int, db: Session = Depends(get_db)):
+    item_os = db.query(models.OSPeca).filter(
+        models.OSPeca.ordem_servico_id == os_id,
+        models.OSPeca.peca_id == peca_id
+    ).first()
+    
+    if not item_os:
+        raise HTTPException(status_code=404, detail="Item não encontrado nesta OS")
+
+    peca_estoque = db.query(models.Peca).filter(models.Peca.id == peca_id).first()
+    if peca_estoque:
+        peca_estoque.estoque_atual += item_os.quantidade
+
+    db.delete(item_os)
+    db.commit()
+    
+    return {"message": "Peça removida e estoque estornado"}
+
+@router.delete("/{os_id}/servicos/{servico_id}")
+def remover_servico_os(os_id: int, servico_id: int, db: Session = Depends(get_db)):
+    item_os = db.query(models.OSServico).filter(
+        models.OSServico.ordem_servico_id == os_id,
+        models.OSServico.servico_id == servico_id
+    ).first()
+    
+    if not item_os:
+        raise HTTPException(status_code=404, detail="Serviço não encontrado nesta OS")
+    
+    db.delete(item_os)
+    db.commit()
+    
+    return {"message": "Serviço removido"}

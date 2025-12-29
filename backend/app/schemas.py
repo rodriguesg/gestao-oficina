@@ -114,9 +114,9 @@ class OSPecaAdd(BaseModel):
 class OSServicoAdd(BaseModel):
     servico_id: int
     quantidade: int = 1
+    valor: Optional[float] = None
 
 class OSPecaDetail(BaseModel):
-    # O ID pode vir nulo na resposta se foi cadastrado manualmente
     peca_id: Optional[int] = None 
     quantidade: int
     valor_unitario: float
@@ -144,6 +144,7 @@ class PagamentoCreate(PagamentoBase):
 class PagamentoResponse(PagamentoBase):
     id: int
     data_pagamento: date
+    ordem_servico_id: int
     class Config:
         from_attributes = True
 
@@ -164,12 +165,34 @@ class OSDetalhada(OSBase):
     # Lista de pagamentos já feitos
     pagamentos: List[PagamentoResponse] = [] 
     
-    # Matemática Financeira
     total_pecas: float
     total_servicos: float
     total_geral: float
-    total_pago: float     # Novo
-    saldo_devedor: float  # Novo (O quanto falta pagar)
+    total_pago: float    
+    saldo_devedor: float 
 
     class Config:
         from_attributes = True
+
+# --- DESPESAS ---
+class DespesaBase(BaseModel):
+    descricao: str
+    valor: float
+    data_vencimento: date
+    categoria: str = "GERAL"
+    status: str = "PAGO"
+
+class DespesaCreate(DespesaBase):
+    pass
+
+class DespesaResponse(DespesaBase):
+    id: int
+    data_pagamento: Optional[date] = None
+    class Config:
+        from_attributes = True
+
+# --- RESUMO FINANCEIRO ---
+class ResumoFinanceiro(BaseModel):
+    total_receitas: float
+    total_despesas: float
+    saldo: float

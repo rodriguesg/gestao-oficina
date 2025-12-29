@@ -111,11 +111,11 @@ class OrdemServico(Base):
     # Relacionamentos
     veiculo: Mapped["Veiculo"] = relationship(back_populates="ordens_servico") # Correcao da linha acima
     
-    # Relacionamentos M:N (Acesso aos itens)
+    # Relacionamentos M:N
     itens_pecas: Mapped[List["OSPeca"]] = relationship(back_populates="os")
     itens_servicos: Mapped[List["OSServico"]] = relationship(back_populates="os")
     
-    # Relacionamento 1:N com Pagamento (Ajuste que conversamos)
+    # Relacionamento 1:N com Pagamento
     pagamentos: Mapped[List["Pagamento"]] = relationship(back_populates="os")
 
 class Pagamento(Base):
@@ -132,6 +132,13 @@ class Pagamento(Base):
 
     os: Mapped["OrdemServico"] = relationship(back_populates="pagamentos")
 
-# Pequena correção na classe Veiculo que citei acima:
-# Onde está: ordens_servico: Mapped[List["OrdemServico"]] = mapped_column(...)
-# O correto é: ordens_servico: Mapped[List["OrdemServico"]] = relationship(back_populates="veiculo")
+class Despesa(Base):
+    __tablename__ = 'despesa'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    descricao: Mapped[str] = mapped_column(String(200))
+    valor: Mapped[float] = mapped_column(Numeric(10, 2))
+    data_vencimento: Mapped[date] = mapped_column(Date)
+    data_pagamento: Mapped[Optional[date]] = mapped_column(Date) 
+    categoria: Mapped[str] = mapped_column(String(50)) 
+    status: Mapped[str] = mapped_column(String(20), default="PAGO") 

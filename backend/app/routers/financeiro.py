@@ -1,5 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from datetime import date
 from .. import models, schemas
@@ -39,3 +40,43 @@ def registrar_pagamento(pagamento: schemas.PagamentoCreate, db: Session = Depend
 @router.get("/", response_model=List[schemas.PagamentoResponse])
 def listar_pagamentos(db: Session = Depends(get_db)):
     return db.query(models.Pagamento).order_by(models.Pagamento.data_pagamento.desc()).all()
+
+@router.get("/resumo", response_model=schemas.ResumoFinanceiro)
+def obter_resumo(db: Session = Depends(get_db)):
+    valor_receitas = db.query(func.sum(models.Pagamento.valor)).scalar()
+    receitas = float(valor_receitas) if valor_receitas else 0.0
+    
+    valor_despesas = db.query(func.sum(models.Despesa.valor)).scalar()
+    despesas = float(valor_despesas) if valor_despesas else 0.0
+    
+    saldo = receitas - despesas
+
+    return {
+        "total_receitas": receitas,
+        "total_despesas": despesas,
+        "saldo": saldo
+    }
+
+# --- ROTAS DE DESPESAS (SAÍDAS) ---
+@router.post("/despesas/", response_model=schemas.DespesaResponse)
+def registrar_despesa(despesa: schemas.DespesaCreate, db: Session = Depends(get_db)):
+    nova_despesa = models.Despesa(**despesa.model_dump())
+    if despesa.status == "PAGO":
+        nova_despesa.data_pagamento = date.today()
+        
+    db.add(nova_despesa)
+    db.commit()
+    db.refresh(nova_despesa)
+    return nova_despesa
+
+@router.get("/despesas/", response_model=List[schemas.DespesaResponse])
+def listar_despesas(db: Session = Depends(get_db)):
+    return db.query(models.Despesa).order_by(models.Despesa.data_vencimento.desc()).all()
+
+@router.delete("/despesas/{id}")
+def remover_despesa(id: int, db: Session = Depends(get_db)):
+    despesa = db.query(models.Despesa).filter(models.Despesa.id == id).first()
+    if not despesa: raise HTTPException(404, "Despesa não encontrada")
+    db.delete(despesa)
+    db.commit()
+    return {"message": "Removido"}

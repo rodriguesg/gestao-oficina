@@ -74,7 +74,7 @@ export default function Clientes() {
   const handleExcluir = async (id: number) => {
       if (!confirm("Tem certeza? Isso pode apagar veículos e OS associadas!")) return
       try {
-          await api.delete(`/clientes/${id}`) // Requer backend DELETE
+          await api.delete(`/clientes/${id}`)
           toast({ title: 'Cliente removido.', status: 'info' })
           fetchClientes()
       } catch (error) {

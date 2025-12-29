@@ -13,6 +13,7 @@ export interface Veiculo {
   placa: string;
   ano: number;
   cliente_id: number;
+  cor: string;
 }
 
 export interface Peca {
@@ -43,11 +44,23 @@ export interface OSDetalhada {
   id: number;
   numero_os?: number;
   data_abertura: string;
+  data_fechamento?: string; 
   status: 'ORCAMENTO' | 'EXECUCAO' | 'FINALIZADO';
   defeito_reclamado: string;
+  km_atual: number;
+  
+  veiculo_id: number;
+  mecanico_id: number;
+
   pecas: ItemPecaDetalhe[];
   servicos: ItemServicoDetalhe[];
+  pagamentos: any[]; 
+
+
+  total_pecas: number; 
+  total_servicos: number;
   total_geral: number;
+  total_pago: number;
   saldo_devedor: number;
 }
 
@@ -56,4 +69,19 @@ export interface OSResumo {
   status: string;
   defeito_reclamado: string;
   data_abertura: string;
+}
+
+export interface Despesa {
+    id: number;
+    descricao: string;
+    valor: number;
+    data_vencimento: string;
+    categoria: string;
+    status: 'PAGO' | 'PENDENTE';
+}
+
+export interface ResumoFinanceiro {
+    total_receitas: number;
+    total_despesas: number;
+    saldo: number;
 }
