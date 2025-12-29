@@ -10,6 +10,8 @@ import { CheckCircleIcon, DeleteIcon } from '@chakra-ui/icons'
 import { FaTools, FaClock, FaWrench, FaBoxOpen, FaMoneyBillWave } from 'react-icons/fa'
 import api from '../services/api'
 import type { OSResumo, OSDetalhada, Peca } from '../types'
+import NovaOSModal from '../components/NovaOSModal'
+import { FaPlus } from 'react-icons/fa6'
 
 interface Servico {
     id: number;
@@ -24,6 +26,7 @@ const STATUS_CONFIG: any = {
 }
 
 export default function OrdensServico() {
+   
   const [listaKanban, setListaKanban] = useState<OSResumo[]>([])
   const [estoque, setEstoque] = useState<Peca[]>([])
   const [servicosDisponiveis, setServicosDisponiveis] = useState<Servico[]>([])
@@ -38,7 +41,16 @@ export default function OrdensServico() {
   // Drag and Drop
   const [draggedOsId, setDraggedOsId] = useState<number | null>(null)
 
-  const { isOpen, onOpen, onClose } = useDisclosure()
+  const { 
+    isOpen, 
+    onOpen, 
+    onClose 
+  } = useDisclosure()
+  const { 
+      isOpen: isNovaOSOpen, 
+      onOpen: onNovaOSOpen, 
+      onClose: onNovaOSClose 
+  } = useDisclosure()
   const toast = useToast()
 
   // Estilos
@@ -215,6 +227,10 @@ export default function OrdensServico() {
       <Flex mb={8} align="center">
         <Heading size="lg">Gestão de Oficina</Heading>
         <Spacer />
+        {}
+        <Button leftIcon={<FaPlus />} colorScheme="brand" onClick={onNovaOSOpen}>
+            Nova OS
+        </Button>
       </Flex>
 
       <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={6}>
@@ -250,7 +266,6 @@ export default function OrdensServico() {
             </Flex>
           </ModalHeader>
           <ModalCloseButton />
-          
           <ModalBody py={6} px={8}>
             {!osAtual ? <Text>Carregando...</Text> : (
               <VStack spacing={8} align="stretch">
@@ -419,6 +434,7 @@ export default function OrdensServico() {
           </ModalBody>
         </ModalContent>
       </Modal>
+      <NovaOSModal isOpen={isNovaOSOpen} onClose={onNovaOSClose} onSuccess={carregarDados} />
     </Box>
   )
 }

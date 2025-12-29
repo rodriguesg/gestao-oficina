@@ -3,11 +3,15 @@ import { Box, SimpleGrid, Stat, StatLabel, StatNumber, StatHelpText, Icon, Flex,
 import { FaMoneyBillWave, FaClipboardList, FaCar, FaUsers } from 'react-icons/fa'
 import api from '../services/api'
 import type { OSResumo, Cliente } from '../types'
+import { useDisclosure, Button } from '@chakra-ui/react'
+import { AddIcon } from '@chakra-ui/icons'
+import NovaOSModal from '../components/NovaOSModal'
 
 export default function Dashboard() {
   const [totalFaturamento, setTotalFaturamento] = useState(0)
   const [osAbertas, setOsAbertas] = useState(0)
   const [totalClientes, setTotalClientes] = useState(0)
+  const { isOpen, onOpen, onClose } = useDisclosure()
 
   const bgCard = useColorModeValue('white', 'gray.800')
 
@@ -60,6 +64,11 @@ export default function Dashboard() {
 
   return (
     <Box>
+      <Flex justify="flex-end" mb={4}>
+           <Button leftIcon={<AddIcon />} colorScheme="brand" size="lg" onClick={onOpen}>
+               Abrir Nova OS
+           </Button>
+       </Flex>
       <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6}>
         <CardEstatistica 
             label="Faturamento Total" 
@@ -87,6 +96,7 @@ export default function Dashboard() {
             color="purple.400" 
         />
       </SimpleGrid>
+      <NovaOSModal isOpen={isOpen} onClose={onClose} onSuccess={carregarDados} />
     </Box>
   )
 }

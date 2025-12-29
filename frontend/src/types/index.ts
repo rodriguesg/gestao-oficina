@@ -19,7 +19,7 @@ export interface Veiculo {
 export interface Peca {
   id: number;
   nome: string;
-  quantidade: number;
+  estoque_atual: number;
   valor_venda: number;
   codigo?: string;
 }

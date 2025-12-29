@@ -1,228 +1,274 @@
 import { useEffect, useState } from 'react'
-import { 
-  Box, Flex, Heading, Button, Table, Thead, Tbody, Tr, Th, Td, 
-  useToast, useColorModeValue, Badge, Input, InputGroup, InputLeftElement,
-  IconButton, HStack, useDisclosure, Modal, ModalOverlay, ModalContent,
-  ModalHeader, ModalCloseButton, ModalBody, ModalFooter, FormControl, FormLabel
+import {
+  Box, Flex, Heading, Button, Table, Thead, Tbody, Tr, Th, Td,
+  useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader,
+  ModalFooter, ModalBody, ModalCloseButton, FormControl, FormLabel, Input,
+  useToast, Tabs, TabList, TabPanels, Tab, TabPanel, useColorModeValue,
+  IconButton, Badge, HStack
 } from '@chakra-ui/react'
-import { SearchIcon, EditIcon, DeleteIcon, AddIcon } from '@chakra-ui/icons'
-import { FaBoxOpen } from 'react-icons/fa'
-import axios from 'axios'
+import { AddIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons'
+import { FaBox, FaWrench } from 'react-icons/fa'
+import api from '../services/api'
+import type { Peca } from '../types'
 
-interface Peca {
-  id: number;
-  nome: string;
-  quantidade: number;
-  preco_venda: number;
+interface Servico {
+    id: number;
+    descricao: string;
+    valor_mao_obra: number;
+    tempo_estimado_minutos: number;
 }
 
 export default function Estoque() {
   const [pecas, setPecas] = useState<Peca[]>([])
-  const [busca, setBusca] = useState('')
+  const [servicos, setServicos] = useState<Servico[]>([])
   
-  // Estados do Formulário
-  const [nome, setNome] = useState('')
-  const [qtd, setQtd] = useState('')
-  const [preco, setPreco] = useState('')
+  // States do Form Peça
   const [idEdicao, setIdEdicao] = useState<number | null>(null)
+  const [nomePeca, setNomePeca] = useState('')
+  const [codigoPeca, setCodigoPeca] = useState('')
+  const [valorPeca, setValorPeca] = useState('')
+  const [qtdPeca, setQtdPeca] = useState('')
+
+  // States do Form Serviço
+  const [descServico, setDescServico] = useState('')
+  const [valorServico, setValorServico] = useState('')
 
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const [tabIndex, setTabIndex] = useState(0) // 0 = Peças, 1 = Serviços
+
   const toast = useToast()
-  
-  // Cores do Tema
   const bgCard = useColorModeValue('white', 'gray.800')
-  const borderColor = useColorModeValue('gray.200', 'gray.700')
 
-  const fetchEstoque = async () => {
+  const carregarDados = async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:8000/pecas/')
-      setPecas(res.data)
-    } catch (error) {
-      console.error(error)
-    }
+        const [resPecas, resServicos] = await Promise.all([
+            api.get('/pecas/'),
+            api.get('/servicos/')
+        ])
+        setPecas(resPecas.data)
+        setServicos(resServicos.data)
+    } catch (error) { console.error("Erro ao carregar estoque", error) }
   }
 
-  useEffect(() => { fetchEstoque() }, [])
+  useEffect(() => { carregarDados() }, [])
 
-  // Função para salvar (Cria ou Atualiza)
+  // --- FUNÇÕES DE ABRIR MODAL ---
+  const abrirModalNovaPeca = () => {
+      setTabIndex(0)
+      setIdEdicao(null)
+      limparForms()
+      onOpen()
+  }
+
+  const abrirModalNovoServico = () => {
+      setTabIndex(1)
+      setIdEdicao(null)
+      limparForms()
+      onOpen()
+  }
+
+  const abrirModalEditarPeca = (p: Peca) => {
+      setTabIndex(0)
+      setIdEdicao(p.id)
+      setNomePeca(p.nome)
+      setCodigoPeca(p.codigo || '')
+      setValorPeca(p.valor_venda.toString())
+      setQtdPeca(p.estoque_atual.toString())
+      onOpen()
+  }
+
+  const abrirModalEditarServico = (s: Servico) => {
+      setTabIndex(1)
+      setIdEdicao(s.id)
+      setDescServico(s.descricao)
+      setValorServico(s.valor_mao_obra.toString())
+      onOpen()
+  }
+
+  const limparForms = () => {
+      setNomePeca(''); setCodigoPeca(''); setValorPeca(''); setQtdPeca('')
+      setDescServico(''); setValorServico('')
+  }
+
+  // --- AÇÕES DO CRUD ---
+
   const handleSalvar = async () => {
-    if (!nome || !qtd || !preco) {
-        toast({ title: 'Preencha todos os campos', status: 'warning' }); return
-    }
-
-    const payload = {
-        nome,
-        quantidade: parseInt(qtd),
-        preco_venda: parseFloat(preco)
-    }
-
-    try {
-        if (idEdicao) {
-            // Atualizar existente
-            await axios.put(`http://127.0.0.1:8000/pecas/${idEdicao}`, payload) // Verifique se sua rota é PUT
-            toast({ title: 'Peça atualizada!', status: 'success' })
-        } else {
-            // Criar nova
-            await axios.post('http://127.0.0.1:8000/pecas/', payload)
-            toast({ title: 'Peça cadastrada!', status: 'success' })
-        }
-        fetchEstoque()
-        fecharModal()
-    } catch (error) {
-        toast({ title: 'Erro ao salvar', status: 'error' })
-    }
-  }
-
-  const handleExcluir = async (id: number) => {
-      if(!confirm("Tem certeza que deseja excluir este item?")) return;
       try {
-          await axios.delete(`http://127.0.0.1:8000/pecas/${id}`)
-          toast({ title: 'Item removido', status: 'info' })
-          fetchEstoque()
-      } catch (error) {
-          toast({ title: 'Erro ao excluir', status: 'error' })
+          if (tabIndex === 0) {
+              // === PEÇAS ===
+              const payload = {
+                  nome: nomePeca,
+                  codigo: codigoPeca,
+                  valor_venda: parseFloat(valorPeca),
+                  estoque_atual: parseInt(qtdPeca)
+              }
+
+              if (idEdicao) {
+                  await api.put(`/pecas/${idEdicao}`, payload)
+                  toast({ title: 'Peça atualizada!', status: 'success' })
+              } else {
+                  await api.post('/pecas/', payload)
+                  toast({ title: 'Peça cadastrada!', status: 'success' })
+              }
+
+          } else {
+              // === SERVIÇOS ===
+              const payload = {
+                  descricao: descServico,
+                  valor_mao_obra: parseFloat(valorServico),
+                  tempo_estimado_minutos: 60 
+              }
+
+              if (idEdicao) {
+                  await api.put(`/servicos/${idEdicao}`, payload)
+                  toast({ title: 'Serviço atualizado!', status: 'success' })
+              } else {
+                  await api.post('/servicos/', payload)
+                  toast({ title: 'Serviço cadastrado!', status: 'success' })
+              }
+          }
+          onClose()
+          limparForms()
+          carregarDados()
+      } catch (error: any) {
+          const msg = error.response?.data?.detail || 'Erro ao salvar'
+          toast({ title: 'Erro', description: msg, status: 'error' })
       }
   }
 
-  const abrirModalCriacao = () => {
-      setIdEdicao(null)
-      setNome(''); setQtd(''); setPreco('')
-      onOpen()
-  }
+  const handleExcluir = async (id: number, tipo: 'peca' | 'servico') => {
+      if (!confirm("Tem certeza? Se este item estiver em uma OS, a exclusão será bloqueada.")) return
 
-  const abrirModalEdicao = (p: Peca) => {
-      setIdEdicao(p.id)
-      setNome(p.nome)
-      setQtd(p.quantidade.toString())
-      setPreco(p.preco_venda.toString())
-      onOpen()
+      try {
+          if (tipo === 'peca') {
+              await api.delete(`/pecas/${id}`)
+          } else {
+              await api.delete(`/servicos/${id}`)
+          }
+          toast({ title: 'Item removido', status: 'info' })
+          carregarDados()
+      } catch (error: any) {
+          const msg = error.response?.data?.detail || 'Não foi possível excluir.'
+          toast({ title: 'Erro', description: msg, status: 'error' })
+      }
   }
-
-  const fecharModal = () => {
-      onClose()
-      setIdEdicao(null)
-  }
-
-  // Filtragem local (Busca)
-  const pecasFiltradas = pecas.filter(p => 
-      p.nome.toLowerCase().includes(busca.toLowerCase())
-  )
 
   return (
     <Box>
-      <Flex mb={6} justify="space-between" align="center" wrap="wrap" gap={4}>
-        <Heading size="md" color={useColorModeValue('gray.700', 'white')}>
-            Controle de Estoque
-        </Heading>
-        
-        <Flex gap={2}>
-            <InputGroup size="sm" w="300px">
-                <InputLeftElement pointerEvents='none'><SearchIcon color='gray.400' /></InputLeftElement>
-                <Input 
-                    placeholder="Buscar peça..." 
-                    variant="filled" 
-                    value={busca}
-                    onChange={(e) => setBusca(e.target.value)}
-                />
-            </InputGroup>
-            <Button 
-                leftIcon={<AddIcon />} 
-                bg="brand.500" 
-                color="white" 
-                size="sm" 
-                _hover={{ bg: "brand.600" }}
-                onClick={abrirModalCriacao}
-            >
-                Nova Peça
-            </Button>
-        </Flex>
-      </Flex>
+      <Heading size="lg" mb={6}>Catálogo & Estoque</Heading>
       
-      <Box bg={bgCard} borderRadius="xl" shadow="sm" overflow="hidden" border="1px solid" borderColor={borderColor}>
-        <Table variant="simple">
-          <Thead bg={useColorModeValue('gray.50', 'gray.700')}>
-            <Tr>
-              <Th>Peça</Th>
-              <Th isNumeric>Qtd</Th>
-              <Th isNumeric>Preço (R$)</Th>
-              <Th>Status</Th>
-              <Th isNumeric>Ações</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {pecasFiltradas.map(p => (
-              <Tr key={p.id} _hover={{ bg: useColorModeValue('gray.50', 'whiteAlpha.100') }}>
-                <Td fontWeight="bold">
-                    <HStack>
-                        <Box as={FaBoxOpen} color="brand.500" />
-                        <span style={{ marginLeft: 8 }}>{p.nome}</span>
-                    </HStack>
-                </Td>
-                <Td isNumeric fontWeight="bold">{p.quantidade}</Td>
-                <Td isNumeric>{p.preco_venda.toFixed(2)}</Td>
-                <Td>
-                  <Badge colorScheme={p.quantidade > 5 ? "green" : p.quantidade > 0 ? "orange" : "red"}>
-                    {p.quantidade > 5 ? "OK" : p.quantidade > 0 ? "BAIXO" : "ZERADO"}
-                  </Badge>
-                </Td>
-                <Td isNumeric>
-                    <IconButton 
-                        aria-label="Editar" 
-                        icon={<EditIcon />} 
-                        size="sm" 
-                        variant="ghost" 
-                        colorScheme="blue"
-                        onClick={() => abrirModalEdicao(p)}
-                    />
-                    <IconButton 
-                        aria-label="Excluir" 
-                        icon={<DeleteIcon />} 
-                        size="sm" 
-                        variant="ghost" 
-                        colorScheme="red"
-                        onClick={() => handleExcluir(p.id)}
-                    />
-                </Td>
-              </Tr>
-            ))}
-            {pecasFiltradas.length === 0 && (
-                <Tr><Td colSpan={5} textAlign="center" py={8} color="gray.500">Nenhuma peça encontrada.</Td></Tr>
-            )}
-          </Tbody>
-        </Table>
+      <Box bg={bgCard} p={4} borderRadius="xl" shadow="sm">
+        <Tabs index={tabIndex} onChange={(index) => setTabIndex(index)} variant="soft-rounded" colorScheme="brand">
+            <Flex justify="space-between" mb={4}>
+                <TabList>
+                    <Tab><FaBox style={{marginRight: '8px'}}/> Peças</Tab>
+                    <Tab><FaWrench style={{marginRight: '8px'}}/> Serviços</Tab>
+                </TabList>
+                <Button 
+                    leftIcon={<AddIcon />} 
+                    colorScheme="brand" 
+                    onClick={tabIndex === 0 ? abrirModalNovaPeca : abrirModalNovoServico}
+                >
+                    {tabIndex === 0 ? 'Nova Peça' : 'Novo Serviço'}
+                </Button>
+            </Flex>
+
+            <TabPanels>
+                {/* TAB PEÇAS */}
+                <TabPanel px={0}>
+                    <Table variant="simple">
+                        <Thead><Tr><Th>Cód.</Th><Th>Nome</Th><Th isNumeric>Estoque</Th><Th isNumeric>Valor</Th><Th isNumeric>Ações</Th></Tr></Thead>
+                        <Tbody>
+                            {pecas.map(p => (
+                                <Tr key={p.id}>
+                                    <Td><Badge>{p.codigo}</Badge></Td>
+                                    <Td fontWeight="bold">{p.nome}</Td>
+                                    <Td isNumeric color={p.estoque_atual < 5 ? 'red.500' : 'inherit'}>{p.estoque_atual} un</Td>
+                                    <Td isNumeric>R$ {p.valor_venda}</Td>
+                                    <Td isNumeric>
+                                        <IconButton aria-label="Editar" icon={<EditIcon />} size="sm" mr={2} onClick={() => abrirModalEditarPeca(p)} />
+                                        <IconButton aria-label="Excluir" icon={<DeleteIcon />} size="sm" colorScheme="red" variant="ghost" onClick={() => handleExcluir(p.id, 'peca')} />
+                                    </Td>
+                                </Tr>
+                            ))}
+                        </Tbody>
+                    </Table>
+                </TabPanel>
+
+                {/* TAB SERVIÇOS */}
+                <TabPanel px={0}>
+                    <Table variant="simple">
+                        <Thead><Tr><Th>ID</Th><Th>Descrição</Th><Th isNumeric>Valor Mão de Obra</Th><Th isNumeric>Ações</Th></Tr></Thead>
+                        <Tbody>
+                            {servicos.map(s => (
+                                <Tr key={s.id}>
+                                    <Td>#{s.id}</Td>
+                                    <Td fontWeight="bold">{s.descricao}</Td>
+                                    <Td isNumeric>R$ {s.valor_mao_obra}</Td>
+                                    <Td isNumeric>
+                                        <IconButton aria-label="Editar" icon={<EditIcon />} size="sm" mr={2} onClick={() => abrirModalEditarServico(s)} />
+                                        <IconButton aria-label="Excluir" icon={<DeleteIcon />} size="sm" colorScheme="red" variant="ghost" onClick={() => handleExcluir(s.id, 'servico')} />
+                                    </Td>
+                                </Tr>
+                            ))}
+                        </Tbody>
+                    </Table>
+                </TabPanel>
+            </TabPanels>
+        </Tabs>
       </Box>
 
       {/* MODAL DE CADASTRO/EDIÇÃO */}
-      <Modal isOpen={isOpen} onClose={fecharModal}>
-        <ModalOverlay backdropFilter="blur(2px)" />
-        <ModalContent bg={bgCard}>
-          <ModalHeader>{idEdicao ? 'Editar Peça' : 'Cadastrar Nova Peça'}</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb={6}>
-            <FormControl isRequired>
-              <FormLabel>Nome da Peça</FormLabel>
-              <Input placeholder="Ex: Filtro de Óleo" value={nome} onChange={e => setNome(e.target.value)} />
-            </FormControl>
-
-            <Flex mt={4} gap={4}>
-                <FormControl isRequired>
-                    <FormLabel>Quantidade</FormLabel>
-                    <Input type="number" value={qtd} onChange={e => setQtd(e.target.value)} />
-                </FormControl>
-
-                <FormControl isRequired>
-                    <FormLabel>Preço de Venda (R$)</FormLabel>
-                    <Input type="number" value={preco} onChange={e => setPreco(e.target.value)} />
-                </FormControl>
-            </Flex>
-          </ModalBody>
-
-          <ModalFooter>
-            <Button onClick={fecharModal} mr={3}>Cancelar</Button>
-            <Button colorScheme="brand" onClick={handleSalvar}>
-                {idEdicao ? 'Salvar Alterações' : 'Cadastrar'}
-            </Button>
-          </ModalFooter>
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalOverlay />
+        <ModalContent>
+            <ModalHeader>
+                {idEdicao ? 'Editar' : 'Cadastrar'} {tabIndex === 0 ? 'Peça' : 'Serviço'}
+            </ModalHeader>
+            <ModalCloseButton />
+            <ModalBody pb={6}>
+                {tabIndex === 0 ? (
+                    // FORM PEÇA
+                    <>
+                        <Flex gap={4}>
+                            <FormControl isRequired>
+                                <FormLabel>Código</FormLabel>
+                                <Input value={codigoPeca} onChange={e => setCodigoPeca(e.target.value)} />
+                            </FormControl>
+                            <FormControl isRequired>
+                                <FormLabel>Estoque Inicial</FormLabel>
+                                <Input type="number" value={qtdPeca} onChange={e => setQtdPeca(e.target.value)} />
+                            </FormControl>
+                        </Flex>
+                        <FormControl mt={4} isRequired>
+                            <FormLabel>Nome da Peça</FormLabel>
+                            <Input value={nomePeca} onChange={e => setNomePeca(e.target.value)} />
+                        </FormControl>
+                        <FormControl mt={4} isRequired>
+                            <FormLabel>Valor de Venda (R$)</FormLabel>
+                            <Input type="number" value={valorPeca} onChange={e => setValorPeca(e.target.value)} />
+                        </FormControl>
+                    </>
+                ) : (
+                    // FORM SERVIÇO
+                    <>
+                        <FormControl isRequired>
+                            <FormLabel>Descrição do Serviço</FormLabel>
+                            <Input value={descServico} onChange={e => setDescServico(e.target.value)} placeholder="Ex: Alinhamento 3D" />
+                        </FormControl>
+                        <FormControl mt={4} isRequired>
+                            <FormLabel>Valor Base (R$)</FormLabel>
+                            <Input type="number" value={valorServico} onChange={e => setValorServico(e.target.value)} />
+                        </FormControl>
+                    </>
+                )}
+            </ModalBody>
+            <ModalFooter>
+                <Button onClick={onClose} mr={3}>Cancelar</Button>
+                <Button colorScheme="brand" onClick={handleSalvar}>
+                    {idEdicao ? 'Salvar Alterações' : 'Cadastrar'}
+                </Button>
+            </ModalFooter>
         </ModalContent>
       </Modal>
     </Box>
